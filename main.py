@@ -2,8 +2,9 @@ import pygame, socket, sys, json
 from pygame import *
 from pygame.locals import *
 
+ip = input("Enter server address: ")
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((socket.gethostname(), 5000))
+s.connect((ip, 5000))
 
 name = input("Enter your name: ")
 s.send(name.encode())
