@@ -22,10 +22,44 @@ class Box():
         self.color = (255, 255, 255)
 
 box = Box()
+players_values_dict = {}
 
 running = True
 while running:
     s.send((f"{box.rect.x}, {box.rect.y}*").encode())
+    players_values = s.recv(1024).decode()
+    # players_values = "{'*jana': '0, 0-!', '*bro': '0, 0-!', '*man': '0, 0-!'}"
+    players_values = players_values[1:-1]
+    players_values = players_values.split('*')
+    players_values = players_values[1:]
+    newstring = ""
+    for i in players_values:
+        for j in i:
+            if j != "'":
+                newstring += j
+    players_values = newstring
+    players_values = players_values.split("!")
+    print(players_values)
+    for i in range(len(players_values)):
+        if i != 0:
+            players_values[i] = players_values[i][2:]
+    players_values.pop()
+    newstring = ""
+    for i in range(len(players_values)):
+        for j in players_values[i]:
+            if j != ",":
+                newstring += j
+    players_values = newstring[:-1]
+    players_values = players_values.split("-")
+    for i in range(len(players_values)):
+        players_values[i] = players_values[i].split(": ")
+        players_values[i][1] = players_values[i][1].split(" ")
+    # print(players_values)
+    players_values_dict = {}
+    for i in range(len(players_values)):
+        players_values_dict[players_values[i][0]] = players_values[i][1]
+    # print(players_values_dict)
+
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
             s.close()
@@ -44,6 +78,13 @@ while running:
     box.rect.x = box.x - 10
     box.rect.y = box.y - 10
     screen.fill((0, 0, 0))
+    for client in players_values_dict:
+        if client != name:
+            # pygame.draw.rect(screen, (100, 100, 100), pygame.Rect(int(players_values_dict[client][0]), int(players_values_dict[client][1]), 20, 20))
+            try:
+                pygame.draw.rect(screen, (100, 100, 100), pygame.Rect(int(players_values_dict[client][0]), int(players_values_dict[client][1]), 20, 20))
+            except ValueError:
+                screen.fill((0, 0, 0))
     pygame.draw.rect(screen, box.color, box.rect)
     pygame.display.update()
     

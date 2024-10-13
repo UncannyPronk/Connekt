@@ -9,23 +9,35 @@ serversocket.listen()
 
 print(f"Server started on {s.gethostbyname(s.gethostname())}\nAwaiting connections...\n")
 
-clients = {}  # Store connected clients
+clients = {}
+client_values = {}
+client_values_backup = {}
 emptyserver = True
 
 def handle_client(conn, addr):
-    global emptyserver, client_thread
+    global emptyserver, client_thread, client_values_backup, clients, client_values
     client_name = conn.recv(1024).decode()
     clients[client_name] = conn
     print(client_name+" has joined the server.")
+    # try:
+    #     client_values[client_name] = client_values_backup[client_name]
+    # except KeyError:
+    #     pass
     emptyserver = False
     while True:
+        # clients = client_values = {}
         data = conn.recv(1024).decode()
         data = data.split("*")
         data = data[0]
+        print(client_name +" : "+data)
+        client_values["*"+str(client_name)] = str(data)+"-!"
         if data == "":
-            conn.close()
             print(client_name+" has left the server")
+            del client_values["*"+str(client_name)]
             del clients[client_name]
+            print(client_values)
+            conn.send(str(client_values).encode())
+            conn.close()
             try:
                 client_thread.join()
             except RuntimeError:
@@ -39,14 +51,14 @@ def handle_client(conn, addr):
                     serversocket.close()
                     sys.exit()
             break
-        print(client_name +" : "+data)
-        # msg = "Data received by server : " + str(data)
-        # conn.send(msg.encode())
+        conn.send(str(client_values).encode())
+        
 
 while True:
     global client_thread
 
     print("check -"+str(emptyserver)+str(len(clients)))
+    client_values_backup = client_values
 
     try:
         clientsocket, address = serversocket.accept()
@@ -57,7 +69,3 @@ while True:
     client_thread = threading.Thread(target=handle_client, args=(clientsocket, address))
     client_thread.daemon = True
     client_thread.start()
-
-
-
-serversocket.close()
