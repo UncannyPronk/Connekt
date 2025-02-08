@@ -66,19 +66,71 @@ with open("map.txt", "r") as mapfile:
 
 class Box():
     def __init__(self):
-        self.x = 100
-        self.y = 160
-        self.rect = pygame.Rect(0, 0, 20, 20)
+        self.rect = pygame.Rect(90, 150, 20, 20)
         self.color = (255, 255, 255)
+        self.movement =[0, 0]
 
 box = Box()
 players_values_dict = {}
 
+def move(self, tiles):
+    collision_types = {"right": False,
+                        "left": False, "top": False, "bottom": False}
+    self.rect.x += self.movement[0]
+    hit_list = []
+    for tile in tiles:
+        if self.rect.colliderect(tile):
+            hit_list.append(tile)
+    for tile in hit_list:
+        if self.movement[0] > 0:
+            collision_types["right"] = True
+            self.rect.right = tile.left
+        elif self.movement[0] < 0:
+            collision_types["left"] = True
+            self.rect.left = tile.right
+    self.rect.y += self.movement[1]
+    hit_list = []
+    for tile in tiles:
+        if self.rect.colliderect(tile):
+            hit_list.append(tile)
+    for tile in hit_list:
+        if self.movement[1] > 0:
+            collision_types["bottom"] = True
+            self.rect.bottom = tile.top
+        elif self.movement[1] < 0:
+            collision_types["top"] = True
+            self.rect.top = tile.bottom
+    return collision_types
+
+def result(bool_):
+    running = True
+    while running:
+        pygame.display.update(); clock.tick(30)
+        screen.fill((0, 0, 0))
+        if bool_:
+            write("You Win!", (300, 200), size=40)
+        else:
+            write("You Lose.", (300, 200), size=40)
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                sys.exit()
 
 running = True
 while running:
-    s.send((f"{box.rect.x}, {box.rect.y}*").encode())
-    players_values = s.recv(1024).decode()
+    if box.rect.colliderect(Rect(((4*50)+25, (3*50)+5, 40, 40))):
+        s.send(("%"+str(name)).encode())
+        result(1)
+    else:
+        try:
+            s.send((f"{box.rect.x}, {box.rect.y}*").encode())
+        except ConnectionResetError:
+            result(0)
+    try:
+        players_values = s.recv(1024).decode()
+    except ConnectionResetError:
+        result(0)
     # players_values = "{'*jana': '0, 0-!', '*bro': '0, 0-!', '*man': '0, 0-!'}"
     players_values = players_values[1:-1]
     players_values = players_values.split('*')
@@ -117,26 +169,29 @@ while running:
             pygame.quit()
             sys.exit()
 
-    keys_pressed = pygame.key.get_pressed()
-    if keys_pressed[K_w] and box.rect.y > 0:
-        box.y -= 4
-    elif keys_pressed[K_s] and box.rect.bottom < SCREEN_HEIGHT:
-        box.y += 4
-    if keys_pressed[K_a] and box.rect.x > 0:
-        box.x -= 4
-    elif keys_pressed[K_d] and box.rect.right < SCREEN_WIDTH:
-        box.x += 4
-    box.rect.x = box.x - 10
-    box.rect.y = box.y - 10
     screen.fill((0, 0, 0))
+
     rects = []
     for y in range(len(tilemap)):
         for x in range(len(tilemap[y])):
             if tilemap[y][x] == 1:
                 pygame.draw.rect(screen, (20, 200, 220), (20+(x*50), y*50, 50, 50))
-                rects.append(Rect(20+(x*40), y*40, 40, 40))
+                rects.append(Rect(20+(x*50), y*50, 50, 50))
             elif tilemap[y][x] == 2:
                 pygame.draw.rect(screen, (225, 0, 0), ((x*50)+25, (y*50)+5, 40, 40))
+
+
+    box.movement = [0, 0]
+    keys_pressed = pygame.key.get_pressed()
+    if keys_pressed[K_w] and box.rect.y > 0 and not collisions["top"]:
+        box.movement[1] = -4
+    elif keys_pressed[K_s] and box.rect.bottom < SCREEN_HEIGHT and not collisions["bottom"]:
+        box.movement[1] = 4
+    if keys_pressed[K_a] and box.rect.x > 0 and not collisions["left"]:
+        box.movement[0] = -4
+    elif keys_pressed[K_d] and box.rect.right < SCREEN_WIDTH and not collisions["right"]:
+        box.movement[0] = 4
+    collisions = move(box, rects)
 
     for client in players_values_dict:
         if client != name:
